@@ -125,4 +125,4 @@ elif option == "Loan Approval Predictor":
 # FOOTER
 # -----------------------------
 st.markdown("---")
-st.markdown("👨‍💻 Developed for Academic Data Analysis & Streamlit Practice")
+st.markdown("👨‍💻 Developed by prajwal")
