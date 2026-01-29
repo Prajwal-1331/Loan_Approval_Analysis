@@ -1,26 +1,52 @@
+
 import streamlit as st
 import pandas as pd
-import numpy as np
+import seaborn as sb
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn.preprocessing import LabelEncoder, StandardScaler
+import numpy as np
 
-# --------------------------------------------------
+# -----------------------------
 # PAGE CONFIG
-# --------------------------------------------------
+# -----------------------------
 st.set_page_config(
-    page_title="Loan Approval ML Dashboard",
+    page_title="Loan Approval Dashboard",
     page_icon="🏦",
     layout="wide"
 )
 
-st.title("🏦 Loan Approval Prediction Dashboard")
-st.markdown("### Machine Learning Based Loan Approval System")
+# -----------------------------
+# CUSTOM CSS
+# -----------------------------
+st.markdown("""
+<style>
+.main-title {
+    font-size: 40px;
+    font-weight: 700;
+    color: #2E86C1;
+}
+.sub-title {
+    font-size: 18px;
+    color: #5D6D7E;
+}
+.card {
+    background-color: #F4F6F7;
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+}
+</style>
+""", unsafe_allow_html=True)
+
+# -----------------------------
+# HEADER
+# -----------------------------
+st.markdown('<div class="main-title">🏦 Loan Approval Analysis & Prediction</div>', unsafe_allow_html=True)
+st.markdown('<div class="sub-title">Interactive Dashboard for Loan Eligibility Insights</div>', unsafe_allow_html=True)
 st.markdown("---")
 
-# --------------------------------------------------
+# -----------------------------
 # LOAD DATA
-# --------------------------------------------------
+# -----------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("LP_Train.csv")
@@ -29,135 +55,122 @@ def load_data():
     df['Married'].fillna('Yes', inplace=True)
     df['Dependents'].fillna(0, inplace=True)
     df['Self_Employed'].fillna('No', inplace=True)
-    df['LoanAmount'].fillna(df['LoanAmount'].median(), inplace=True)
-    df['Loan_Amount_Term'].fillna(360, inplace=True)
+    df['LoanAmount'].fillna(128.0, inplace=True)
+    df['Loan_Amount_Term'].fillna(360.0, inplace=True)
     df['Credit_History'].fillna(1.0, inplace=True)
 
     df['Dependents'] = df['Dependents'].replace('[+]', '', regex=True).astype(int)
+
     return df
 
 df = load_data()
 
-# --------------------------------------------------
-# ENCODING
-# --------------------------------------------------
-le = LabelEncoder()
-for col in ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Loan_Status']:
-    df[col] = le.fit_transform(df[col])
+# -----------------------------
+# KPI METRICS
+# -----------------------------
+approved = df[df['Loan_Status'] == 'Y'].shape[0]
+total = df.shape[0]
+approval_rate = round((approved / total) * 100, 2)
 
-# --------------------------------------------------
-# FEATURES & TARGET
-# --------------------------------------------------
-X = df[
-    ['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount',
-     'Loan_Amount_Term', 'Credit_History', 'Education', 'Married']
-]
-y = df['Loan_Status']
+col1, col2, col3 = st.columns(3)
+col1.metric("📄 Total Applications", total)
+col2.metric("✅ Approved Loans", approved)
+col3.metric("📊 Approval Rate", f"{approval_rate}%")
 
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
+st.markdown("---")
 
-# --------------------------------------------------
-# TRAIN MODEL
-# --------------------------------------------------
-model = LogisticRegression(max_iter=1000)
-model.fit(X_scaled, y)
-
-# --------------------------------------------------
-# GAUGE FUNCTION (DEFINED BEFORE IF/ELIF)
-# --------------------------------------------------
-def draw_gauge(prob):
-    fig, ax = plt.subplots(figsize=(6, 3))
-    ax.set_xlim(0, 100)
-    ax.set_ylim(0, 1)
-
-    ax.barh(0.5, 100, height=0.3, color="#E5E7E9")
-
-    color = "#2ECC71" if prob >= 70 else "#F4D03F" if prob >= 40 else "#E74C3C"
-    ax.barh(0.5, prob, height=0.3, color=color)
-
-    ax.text(prob, 0.5, f"{prob}%", ha="center", va="center",
-            fontsize=14, fontweight="bold")
-
-    ax.set_yticks([])
-    ax.set_xticks([0, 20, 40, 60, 80, 100])
-    ax.set_title("Loan Approval Probability (%)")
-
-    st.pyplot(fig)
-
-# --------------------------------------------------
+# -----------------------------
 # SIDEBAR
-# --------------------------------------------------
-st.sidebar.header("📊 Navigation")
-section = st.sidebar.radio(
-    "Select Section",
-    ["Dataset Overview", "Loan Approval Predictor"]
+# -----------------------------
+st.sidebar.header("📌 Dashboard Menu")
+option = st.sidebar.selectbox(
+    "Choose Section",
+    ["Dataset Overview", "EDA Visualizations", "Loan Approval Predictor"]
 )
 
-# --------------------------------------------------
+# -----------------------------
 # DATASET OVERVIEW
-# --------------------------------------------------
-if section == "Dataset Overview":
-    st.subheader("📄 Dataset Preview")
-    st.dataframe(df.head())
+# -----------------------------
+if option == "Dataset Overview":
+    st.subheader("📄 Dataset Overview")
 
-    st.subheader("📊 Model Accuracy")
-    accuracy = model.score(X_scaled, y)
-    st.success(f"Logistic Regression Accuracy: {round(accuracy * 100, 2)}%")
+    with st.expander("🔍 View Raw Data"):
+        st.dataframe(df)
 
-# --------------------------------------------------
+    st.subheader("📌 Statistical Summary")
+    st.dataframe(df.describe())
+
+    st.subheader("🧾 Missing Values")
+    st.dataframe(df.isnull().sum().to_frame("Missing Count"))
+
+# -----------------------------
+# EDA VISUALIZATIONS
+# -----------------------------
+elif option == "EDA Visualizations":
+    st.subheader("📈 Exploratory Data Analysis")
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Loan Status vs Credit History**")
+        fig, ax = plt.subplots()
+        pd.crosstab(df['Loan_Status'], df['Credit_History']).plot(kind='bar', ax=ax)
+        st.pyplot(fig)
+
+    with col2:
+        st.markdown("**Applicant Income Distribution**")
+        fig, ax = plt.subplots()
+        sb.boxplot(x=df['Loan_Status'], y=df['ApplicantIncome'], ax=ax)
+        st.pyplot(fig)
+
+    st.markdown("**Property Area vs Loan Status**")
+    fig, ax = plt.subplots()
+    pd.crosstab(df['Property_Area'], df['Loan_Status']).plot(kind='bar', ax=ax)
+    st.pyplot(fig)
+
+# -----------------------------
 # LOAN APPROVAL PREDICTOR
-# --------------------------------------------------
-elif section == "Loan Approval Predictor":
-    st.subheader("🧮 Check Loan Approval Probability")
+# -----------------------------
+elif option == "Loan Approval Predictor":
+    st.subheader("🧮 Loan Approval Probability Checker")
 
     col1, col2 = st.columns(2)
 
     with col1:
         name = st.text_input("👤 Applicant Name")
-        applicant_income = st.slider("💰 Applicant Income", 0, 30000, 5000)
+        income = st.slider("💰 Applicant Income", 0, 30000, 5000)
         co_income = st.slider("🤝 Coapplicant Income", 0, 15000, 2000)
         loan_amt = st.slider("🏦 Loan Amount", 0, 600, 150)
 
     with col2:
-        loan_term = st.selectbox("📆 Loan Term (Months)", [120, 180, 240, 300, 360])
-        credit = st.radio(
-            "📊 Credit History",
-            [1.0, 0.0],
-            format_func=lambda x: "Good" if x == 1.0 else "Bad"
-        )
+        credit = st.radio("📊 Credit History", [1.0, 0.0], format_func=lambda x: "Good" if x == 1.0 else "Bad")
         education = st.selectbox("🎓 Education", ["Graduate", "Not Graduate"])
-        married = st.selectbox("💍 Married", ["Yes", "No"])
+        married = st.selectbox("💍 Marital Status", ["Yes", "No"])
 
-    if st.button("🔍 Predict Loan Approval"):
-        input_df = pd.DataFrame([[
-            applicant_income,
-            co_income,
-            loan_amt,
-            loan_term,
-            credit,
-            1 if education == "Graduate" else 0,
-            1 if married == "Yes" else 0
-        ]], columns=X.columns)
+    if st.button("🔍 Check Loan Approval"):
+        score = 0
 
-        input_scaled = scaler.transform(input_df)
-        prob = model.predict_proba(input_scaled)[0][1]
-        prob_percent = int(prob * 100)
+        if credit == 1.0:
+            score += 50
+        if income > 5000:
+            score += 20
+        if co_income > 2000:
+            score += 10
+        if loan_amt < 200:
+            score += 10
+        if education == "Graduate":
+            score += 5
+        if married == "Yes":
+            score += 5
 
-        st.markdown(f"## 📊 Result for **{name if name else 'Applicant'}**")
-        draw_gauge(prob_percent)
+        st.markdown("### 📊 Approval Probability")
+        st.progress(score / 100)
 
-        if prob_percent >= 70:
-            st.success("✅ High Chance of Loan Approval")
-        elif prob_percent >= 40:
-            st.warning("⚠️ Moderate Chance of Loan Approval")
+        if score >= 70:
+            st.success(f"✅ **{name}**, High Chance of Loan Approval ({score}%)")
+        elif score >= 50:
+            st.warning(f"⚠️ **{name}**, Moderate Chance of Loan Approval ({score}%)")
         else:
-            st.error("❌ Low Chance of Loan Approval")
+            st.error(f"❌ **{name}**, Low Chance of Loan Approval ({score}%)")
 
-        st.info("Prediction generated using Logistic Regression model.")
-
-# --------------------------------------------------
-# FOOTER
-# --------------------------------------------------
-st.markdown("---")
-st.markdown("🎯 **ML-Based Loan Approval System | Streamlit Dashboard**")
+        st.info("📌 This prediction is based on rule-based logic for academic demonstration.")
