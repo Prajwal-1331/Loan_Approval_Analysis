@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-# -----------------------------
+# --------------------------------------------------
 # PAGE CONFIG
-# -----------------------------
+# --------------------------------------------------
 st.set_page_config(
     page_title="Loan Approval ML Dashboard",
     page_icon="🏦",
@@ -15,12 +15,12 @@ st.set_page_config(
 )
 
 st.title("🏦 Loan Approval Prediction Dashboard")
-st.markdown("### Machine Learning based Loan Approval System")
+st.markdown("### Machine Learning Based Loan Approval System")
 st.markdown("---")
 
-# -----------------------------
+# --------------------------------------------------
 # LOAD DATA
-# -----------------------------
+# --------------------------------------------------
 @st.cache_data
 def load_data():
     df = pd.read_csv("LP_Train.csv")
@@ -38,16 +38,16 @@ def load_data():
 
 df = load_data()
 
-# -----------------------------
+# --------------------------------------------------
 # ENCODING
-# -----------------------------
-encoder = LabelEncoder()
+# --------------------------------------------------
+le = LabelEncoder()
 for col in ['Gender', 'Married', 'Education', 'Self_Employed', 'Property_Area', 'Loan_Status']:
-    df[col] = encoder.fit_transform(df[col])
+    df[col] = le.fit_transform(df[col])
 
-# -----------------------------
+# --------------------------------------------------
 # FEATURES & TARGET
-# -----------------------------
+# --------------------------------------------------
 X = df[
     ['ApplicantIncome', 'CoapplicantIncome', 'LoanAmount',
      'Loan_Amount_Term', 'Credit_History', 'Education', 'Married']
@@ -57,49 +57,27 @@ y = df['Loan_Status']
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
-# -----------------------------
+# --------------------------------------------------
 # TRAIN MODEL
-# -----------------------------
+# --------------------------------------------------
 model = LogisticRegression(max_iter=1000)
 model.fit(X_scaled, y)
 
-# -----------------------------
-# SIDEBAR
-# -----------------------------
-st.sidebar.header("📊 Navigation")
-section = st.sidebar.radio(
-    "Select Section",
-    ["Dataset Overview", "Loan Approval Predictor"]
-)
-
-# -----------------------------
-# DATASET OVERVIEW
-# -----------------------------
-if section == "Dataset Overview":
-    st.subheader("📄 Dataset Preview")
-    st.dataframe(df.head())
-
-    st.subheader("📊 Model Performance")
-    accuracy = model.score(X_scaled, y)
-    st.success(f"Logistic Regression Accuracy: {round(accuracy * 100, 2)}%")
-
-# -----------------------------
-# GAUGE FUNCTION
-# -----------------------------
+# --------------------------------------------------
+# GAUGE FUNCTION (DEFINED BEFORE IF/ELIF)
+# --------------------------------------------------
 def draw_gauge(prob):
     fig, ax = plt.subplots(figsize=(6, 3))
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 1)
 
-    # background bar
     ax.barh(0.5, 100, height=0.3, color="#E5E7E9")
 
-    # colored bar
     color = "#2ECC71" if prob >= 70 else "#F4D03F" if prob >= 40 else "#E74C3C"
     ax.barh(0.5, prob, height=0.3, color=color)
 
-    ax.text(prob, 0.5, f"{prob}%", va="center", ha="center",
-            fontsize=14, fontweight="bold", color="black")
+    ax.text(prob, 0.5, f"{prob}%", ha="center", va="center",
+            fontsize=14, fontweight="bold")
 
     ax.set_yticks([])
     ax.set_xticks([0, 20, 40, 60, 80, 100])
@@ -107,9 +85,29 @@ def draw_gauge(prob):
 
     st.pyplot(fig)
 
-# -----------------------------
+# --------------------------------------------------
+# SIDEBAR
+# --------------------------------------------------
+st.sidebar.header("📊 Navigation")
+section = st.sidebar.radio(
+    "Select Section",
+    ["Dataset Overview", "Loan Approval Predictor"]
+)
+
+# --------------------------------------------------
+# DATASET OVERVIEW
+# --------------------------------------------------
+if section == "Dataset Overview":
+    st.subheader("📄 Dataset Preview")
+    st.dataframe(df.head())
+
+    st.subheader("📊 Model Accuracy")
+    accuracy = model.score(X_scaled, y)
+    st.success(f"Logistic Regression Accuracy: {round(accuracy * 100, 2)}%")
+
+# --------------------------------------------------
 # LOAN APPROVAL PREDICTOR
-# -----------------------------
+# --------------------------------------------------
 elif section == "Loan Approval Predictor":
     st.subheader("🧮 Check Loan Approval Probability")
 
@@ -143,23 +141,23 @@ elif section == "Loan Approval Predictor":
         ]], columns=X.columns)
 
         input_scaled = scaler.transform(input_df)
-        probability = model.predict_proba(input_scaled)[0][1]
-        probability_percent = int(probability * 100)
+        prob = model.predict_proba(input_scaled)[0][1]
+        prob_percent = int(prob * 100)
 
         st.markdown(f"## 📊 Result for **{name if name else 'Applicant'}**")
-        draw_gauge(probability_percent)
+        draw_gauge(prob_percent)
 
-        if probability_percent >= 70:
+        if prob_percent >= 70:
             st.success("✅ High Chance of Loan Approval")
-        elif probability_percent >= 40:
+        elif prob_percent >= 40:
             st.warning("⚠️ Moderate Chance of Loan Approval")
         else:
             st.error("❌ Low Chance of Loan Approval")
 
         st.info("Prediction generated using Logistic Regression model.")
 
-# -----------------------------
+# --------------------------------------------------
 # FOOTER
-# -----------------------------
+# --------------------------------------------------
 st.markdown("---")
 st.markdown("🎯 **ML-Based Loan Approval System | Streamlit Dashboard**")
