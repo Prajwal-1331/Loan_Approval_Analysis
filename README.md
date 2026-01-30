@@ -1,5 +1,7 @@
 Project Title: Loan_Approval_Analysis
+
 Introduction
+
 In this project, I worked on a loan approval dataset to understand how banks decide whether a person’s loan should be approved or rejected. The dataset contains information like applicant income, loan amount, credit history, education, marital status, property area, etc. The main purpose of this project was to study the dataset properly, find useful patterns, and understand which factors affect loan approval the most.
 
 What I did in this project (Step-by-Step)
